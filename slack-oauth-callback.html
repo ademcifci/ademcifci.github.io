@@ -56,12 +56,6 @@
             border: 1px solid #f5c6cb;
         }
         
-        .loading {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        
         .instructions {
             background: #fff3cd;
             color: #856404;
@@ -75,13 +69,24 @@
             color: #856404;
         }
         
-        .code {
+        .code-container {
             background: #f8f9fa;
-            padding: 0.5rem;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border: 2px dashed #007bff;
+        }
+        
+        .code {
+            background: #e9ecef;
+            padding: 0.75rem;
             border-radius: 4px;
-            font-family: monospace;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
             word-break: break-all;
             margin: 0.5rem 0;
+            border: 1px solid #ced4da;
+            user-select: all;
         }
         
         button {
@@ -100,25 +105,41 @@
             background: #0056b3;
         }
         
-        button:disabled {
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-secondary {
             background: #6c757d;
-            cursor: not-allowed;
         }
         
-        .spinner {
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #007bff;
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .step {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .step-number {
+            background: #007bff;
+            color: white;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
             margin-right: 0.5rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
         
         .hidden {
@@ -128,18 +149,12 @@
 </head>
 <body>
     <div class="container">
-        <div class="icon">🔗</div>
-        <h1>Slack OAuth - Forecast Weekly Report</h1>
+        <div class="icon">✅</div>
+        <h1>Slack Authorization Successful!</h1>
         
-        <div id="loading" class="status loading">
-            <div class="spinner"></div>
-            Processing authorization...
-        </div>
-        
-        <div id="success" class="status success hidden">
-            <h3>✅ Success!</h3>
-            <p>Slack authorization completed successfully. You can now close this tab and return to the Forecast app.</p>
-            <button onclick="tryDeepLink()">🚀 Return to App</button>
+        <div id="success" class="status success">
+            <h3>🎉 Almost Done!</h3>
+            <p>Your Slack app has been authorized successfully. Now complete the setup in your Forecast app.</p>
         </div>
         
         <div id="error" class="status error hidden">
@@ -147,18 +162,47 @@
             <p id="errorMessage">An error occurred during authorization.</p>
         </div>
         
-        <div id="manual" class="instructions hidden">
-            <h3>🔧 Manual Setup Required</h3>
-            <p>The automatic redirect didn't work, but we can still complete the setup manually:</p>
-            <ol>
-                <li>Copy the authorization code below:</li>
+        <div id="instructions" class="instructions">
+            <h3>📋 Complete the Setup</h3>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Copy the authorization code below:</strong>
+            </div>
+            
+            <div class="code-container">
                 <div class="code" id="authCode">Loading...</div>
-                <li>Return to the Forecast Weekly Report app</li>
-                <li>In Settings → Slack Integration, click "Manual Setup"</li>
-                <li>Paste the code there and click "Complete Setup"</li>
-            </ol>
-            <button onclick="copyCode()">📋 Copy Code</button>
-            <button onclick="tryDeepLink()">🔄 Try App Link Again</button>
+                <button onclick="copyCode()" class="btn-success">📋 Copy Code</button>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Return to the Forecast Weekly Report app</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Go to Settings → Slack Integration</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Choose "Manual Setup" and paste the code</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">5</span>
+                <strong>Click "Complete Setup"</strong>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+                <button onclick="tryDeepLink()" class="btn-secondary">
+                    🔗 Try Automatic Return (May Not Work in Development)
+                </button>
+                <p style="font-size: 12px; color: #666; margin-top: 0.5rem;">
+                    The automatic return only works after the app is installed. Use manual setup during development.
+                </p>
+            </div>
         </div>
     </div>
 
@@ -171,21 +215,16 @@
         const errorDescription = urlParams.get('error_description');
         
         // DOM elements
-        const loadingDiv = document.getElementById('loading');
         const successDiv = document.getElementById('success');
         const errorDiv = document.getElementById('error');
-        const manualDiv = document.getElementById('manual');
+        const instructionsDiv = document.getElementById('instructions');
         const errorMessage = document.getElementById('errorMessage');
         const authCodeDiv = document.getElementById('authCode');
         
-        function showSection(section) {
-            // Hide all sections
-            [loadingDiv, successDiv, errorDiv, manualDiv].forEach(div => {
-                div.classList.add('hidden');
-            });
-            
-            // Show the requested section
-            section.classList.remove('hidden');
+        function showError() {
+            successDiv.classList.add('hidden');
+            instructionsDiv.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
         }
         
         function tryDeepLink() {
@@ -196,18 +235,10 @@
             // Try to open the deep link
             window.location.href = deepLinkUrl;
             
-            // Fallback: show manual instructions after a delay
+            // Show a message after a delay
             setTimeout(() => {
-                if (document.hasFocus()) {
-                    // If we're still focused, the deep link probably didn't work
-                    showManualInstructions();
-                }
+                alert('If the app didn\'t open automatically, please use the manual setup steps above.');
             }, 2000);
-        }
-        
-        function showManualInstructions() {
-            authCodeDiv.textContent = code;
-            showSection(manualDiv);
         }
         
         function copyCode() {
@@ -215,8 +246,10 @@
                 const button = event.target;
                 const originalText = button.textContent;
                 button.textContent = '✅ Copied!';
+                button.style.background = '#28a745';
                 setTimeout(() => {
                     button.textContent = originalText;
+                    button.style.background = '#28a745';
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy:', err);
@@ -225,29 +258,21 @@
                 range.selectNode(authCodeDiv);
                 window.getSelection().removeAllRanges();
                 window.getSelection().addRange(range);
+                alert('Code selected! Press Ctrl+C to copy.');
             });
         }
         
         // Main logic
         if (error) {
             errorMessage.textContent = `${error}: ${errorDescription || 'Unknown error occurred'}`;
-            showSection(errorDiv);
+            showError();
         } else if (code) {
-            // We have a code, try the deep link
-            setTimeout(() => {
-                tryDeepLink();
-            }, 1500); // Give user time to see the loading state
+            // Show the code and instructions
+            authCodeDiv.textContent = code;
         } else {
             errorMessage.textContent = 'No authorization code received from Slack.';
-            showSection(errorDiv);
+            showError();
         }
-        
-        // Detect if we lose focus (deep link worked)
-        window.addEventListener('blur', () => {
-            if (code && !errorDiv.classList.contains('hidden') === false) {
-                showSection(successDiv);
-            }
-        });
         
         console.log('OAuth callback page loaded', { code: !!code, error, state });
     </script>
