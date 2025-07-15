@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harvest OAuth - Forecast Weekly Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 500px;
+            margin: 1rem;
+        }
+        
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 500;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            text-align: left;
+            margin-top: 1rem;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        
+        .code-container {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border: 2px dashed #007bff;
+        }
+        
+        .code {
+            background: #e9ecef;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 0.5rem 0;
+            border: 1px solid #ced4da;
+            user-select: all;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .step {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .step-number {
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✅</div>
+        <h1>Harvest Authorization Successful!</h1>
+        
+        <div id="success" class="status success">
+            <h3>🎉 Almost Done!</h3>
+            <p>Your Harvest account has been authorized for Forecast access successfully. Now complete the setup in your Forecast Weekly Report app.</p>
+        </div>
+        
+        <div id="error" class="status error hidden">
+            <h3>❌ Authorization Failed</h3>
+            <p id="errorMessage">An error occurred during authorization.</p>
+        </div>
+        
+        <div id="instructions" class="instructions">
+            <h3>📋 Complete the Setup</h3>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Copy the authorization code below:</strong>
+            </div>
+            
+            <div class="code-container">
+                <div class="code" id="authCode">Loading...</div>
+                <button onclick="copyCode()" class="btn-success">📋 Copy Code</button>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Return to the Forecast Weekly Report app</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Go to Settings → Forecast Integration Settings</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">4</span>
+                <strong>Choose "Manual Setup" and paste the code</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">5</span>
+                <strong>Click "Complete Setup"</strong>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+                <button onclick="tryDeepLink()" class="btn-secondary">
+                    🔗 Try Automatic Return (May Not Work in Development)
+                </button>
+                <p style="font-size: 12px; color: #666; margin-top: 0.5rem;">
+                    The automatic return only works after the app is installed. Use manual setup during development.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        // DOM elements
+        const successDiv = document.getElementById('success');
+        const errorDiv = document.getElementById('error');
+        const instructionsDiv = document.getElementById('instructions');
+        const errorMessage = document.getElementById('errorMessage');
+        const authCodeDiv = document.getElementById('authCode');
+        
+        function showError() {
+            successDiv.classList.add('hidden');
+            instructionsDiv.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function tryDeepLink() {
+            const deepLinkUrl = `forecastreport://forecast/oauth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+            
+            console.log('Attempting deep link:', deepLinkUrl);
+            
+            // Try to open the deep link
+            window.location.href = deepLinkUrl;
+            
+            // Show a message after a delay
+            setTimeout(() => {
+                alert('If the app didn\'t open automatically, please use the manual setup steps above.');
+            }, 2000);
+        }
+        
+        function copyCode() {
+            navigator.clipboard.writeText(code).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.style.background = '#28a745';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '#28a745';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback: select the text
+                const range = document.createRange();
+                range.selectNode(authCodeDiv);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                alert('Code selected! Press Ctrl+C to copy.');
+            });
+        }
+        
+        // Main logic
+        if (error) {
+            errorMessage.textContent = `${error}: ${errorDescription || 'Unknown error occurred'}`;
+            showError();
+        } else if (code) {
+            // Show the code and instructions
+            authCodeDiv.textContent = code;
+        } else {
+            errorMessage.textContent = 'No authorization code received from Harvest.';
+            showError();
+        }
+        
+        console.log('Harvest OAuth callback page loaded for Forecast access', { code: !!code, error, state });
+    </script>
+</body>
+</html>
