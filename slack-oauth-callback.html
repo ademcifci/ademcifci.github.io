@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slack OAuth - Forecast Weekly Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 600px;
+            margin: 1rem;
+        }
+        
+        .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-weight: 500;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            text-align: left;
+            margin-top: 1rem;
+        }
+        
+        .instructions h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        
+        .code-container {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            border: 2px dashed #007bff;
+        }
+        
+        .code {
+            background: #e9ecef;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 0.5rem 0;
+            border: 1px solid #ced4da;
+            user-select: all;
+            cursor: pointer;
+        }
+        
+        .code:hover {
+            background: #dee2e6;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .step {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .step-number {
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .auto-return-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d7ff;
+            color: #004085;
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            text-align: left;
+        }
+        
+        .countdown {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 1.1em;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            border-radius: 3px;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✅</div>
+        <h1>Slack Authorization Successful!</h1>
+        
+        <div id="success" class="status success">
+            <h3>🎉 Almost Done!</h3>
+            <p>Your Slack app has been authorized successfully. Now complete the setup in your Forecast app.</p>
+        </div>
+        
+        <div id="error" class="status error hidden">
+            <h3>❌ Authorization Failed</h3>
+            <p id="errorMessage">An error occurred during authorization.</p>
+        </div>
+        
+        <div id="autoReturn" class="auto-return-info hidden">
+            <h4>🔄 Attempting Automatic Return...</h4>
+            <p>Trying to automatically return to the Forecast app. If this doesn't work in <span id="countdown" class="countdown">10</span> seconds, please use the manual setup below.</p>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 100%;"></div>
+            </div>
+        </div>
+        
+        <div id="instructions" class="instructions">
+            <h3>📋 Complete the Setup</h3>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Copy the authorization code below:</strong>
+            </div>
+            
+            <div class="code-container">
+                <div class="code" id="authCode" onclick="selectCode()">Loading...</div>
+                <button onclick="copyCode()" class="btn-success" id="copyButton">📋 Copy Code</button>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Return to the Forecast Weekly Report app</strong>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>In the app's Settings → Slack Integration section:</strong>
+                <ul>
+                    <li>Click <strong>"🔌 Connect Slack (OAuth)"</strong></li>
+                    <li>Choose <strong>"Manual"</strong> setup when prompted</li>
+                    <li>Paste the code when requested</li>
+                </ul>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #dee2e6;">
+                <button onclick="tryDeepLink()" class="btn-secondary" id="deepLinkButton">
+                    🔗 Try Automatic Return
+                </button>
+                <p style="font-size: 12px; color: #666; margin-top: 0.5rem;">
+                    The automatic return works best when the desktop app is installed. Manual setup always works.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        
+        // DOM elements
+        const successDiv = document.getElementById('success');
+        const errorDiv = document.getElementById('error');
+        const instructionsDiv = document.getElementById('instructions');
+        const autoReturnDiv = document.getElementById('autoReturn');
+        const errorMessage = document.getElementById('errorMessage');
+        const authCodeDiv = document.getElementById('authCode');
+        const copyButton = document.getElementById('copyButton');
+        const deepLinkButton = document.getElementById('deepLinkButton');
+        const countdownSpan = document.getElementById('countdown');
+        const progressFill = document.getElementById('progressFill');
+        
+        // Auto-return countdown timer
+        let countdownTimer;
+        let progressTimer;
+        let currentCountdown = 10;
+        
+        function showError() {
+            successDiv.classList.add('hidden');
+            instructionsDiv.classList.add('hidden');
+            autoReturnDiv.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+        }
+        
+        function startAutoReturn() {
+            autoReturnDiv.classList.remove('hidden');
+            
+            // Start countdown
+            currentCountdown = 10;
+            updateCountdown();
+            
+            countdownTimer = setInterval(() => {
+                currentCountdown--;
+                updateCountdown();
+                
+                if (currentCountdown <= 0) {
+                    clearInterval(countdownTimer);
+                    clearInterval(progressTimer);
+                    autoReturnDiv.classList.add('hidden');
+                    
+                    // Show manual instructions
+                    const manualNote = document.createElement('div');
+                    manualNote.className = 'status warning';
+                    manualNote.innerHTML = '<strong>⏰ Automatic return timed out.</strong> Please use the manual setup below.';
+                    instructionsDiv.parentNode.insertBefore(manualNote, instructionsDiv);
+                }
+            }, 1000);
+            
+            // Start progress bar animation
+            let progressWidth = 100;
+            progressTimer = setInterval(() => {
+                progressWidth -= 1;
+                progressFill.style.width = progressWidth + '%';
+                
+                if (progressWidth <= 0) {
+                    clearInterval(progressTimer);
+                }
+            }, 100);
+            
+            // Try automatic deep link
+            setTimeout(() => {
+                tryDeepLink();
+            }, 1000);
+        }
+        
+        function updateCountdown() {
+            if (countdownSpan) {
+                countdownSpan.textContent = currentCountdown;
+            }
+        }
+        
+        function tryDeepLink() {
+            if (!code) {
+                alert('No authorization code available for deep link.');
+                return;
+            }
+            
+            const deepLinkUrl = `forecastreport://slack/oauth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
+            
+            console.log('Attempting deep link:', deepLinkUrl);
+            
+            // Disable the button temporarily
+            if (deepLinkButton) {
+                deepLinkButton.disabled = true;
+                deepLinkButton.textContent = '🔄 Trying...';
+                
+                setTimeout(() => {
+                    deepLinkButton.disabled = false;
+                    deepLinkButton.textContent = '🔗 Try Automatic Return';
+                }, 3000);
+            }
+            
+            // Try to open the deep link
+            try {
+                window.location.href = deepLinkUrl;
+            } catch (err) {
+                console.error('Deep link failed:', err);
+            }
+        }
+        
+        function selectCode() {
+            if (authCodeDiv && code) {
+                const range = document.createRange();
+                range.selectNodeContents(authCodeDiv);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+        
+        function copyCode() {
+            if (!code) {
+                alert('No code to copy!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = copyButton.textContent;
+                copyButton.textContent = '✅ Copied!';
+                copyButton.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                    copyButton.style.background = '#28a745';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback: select the text
+                selectCode();
+                alert('Code selected! Press Ctrl+C (or Cmd+C on Mac) to copy.');
+            });
+        }
+        
+        // Main logic
+        if (error) {
+            errorMessage.textContent = `${error}: ${errorDescription || 'Unknown error occurred'}`;
+            showError();
+        } else if (code) {
+            // Show the code and instructions
+            authCodeDiv.textContent = code;
+            
+            // Try automatic return first
+            startAutoReturn();
+            
+        } else {
+            errorMessage.textContent = 'No authorization code received from Slack.';
+            showError();
+        }
+        
+        console.log('OAuth callback page loaded', { 
+            hasCode: !!code, 
+            hasError: !!error, 
+            hasState: !!state,
+            codeLength: code ? code.length : 0
+        });
+    </script>
+</body>
+</html>
