@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slack Authorization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #4A154B;
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 32px 24px;
+            text-align: center;
+        }
+        
+        .status-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+        
+        .status-message {
+            font-size: 18px;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        
+        .auth-code {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            word-break: break-all;
+            user-select: all;
+            cursor: pointer;
+        }
+        
+        .button {
+            background: #4A154B;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 8px;
+            transition: background-color 0.2s;
+        }
+        
+        .button:hover {
+            background: #350d36;
+        }
+        
+        .button-secondary {
+            background: #868e96;
+        }
+        
+        .button-secondary:hover {
+            background: #6c757d;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 20px 0;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .countdown {
+            font-weight: bold;
+            color: #4A154B;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Slack Authorization</h1>
+        </div>
+        
+        <div class="content">
+            <!-- Loading State -->
+            <div id="loadingState">
+                <span class="status-icon">⏳</span>
+                <div class="status-message">Processing your authorization...</div>
+                <p>Please wait while we process your Slack authorization.</p>
+            </div>
+            
+            <!-- Success State -->
+            <div id="successState" class="hidden">
+                <span class="status-icon">✅</span>
+                <div class="status-message">Authorization Successful!</div>
+                <p>Your authorization code:</p>
+                <div class="auth-code" id="authCode" onclick="selectCode()"></div>
+                <div class="instructions">
+                    <strong>What happens next:</strong><br>
+                    • We're attempting to automatically return to your app<br>
+                    • If that doesn't work, copy the code above and paste it into the app<br>
+                    • You can close this window after copying the code
+                </div>
+                <button class="button" id="copyButton" onclick="copyCode()">📋 Copy Code</button>
+                <div id="autoReturnStatus"></div>
+            </div>
+            
+            <!-- Error State -->
+            <div id="errorState" class="hidden">
+                <span class="status-icon">❌</span>
+                <div class="status-message">Authorization Failed</div>
+                <div class="error-message" id="errorMessage"></div>
+                <p>Please try authorizing again from your app.</p>
+                <button class="button-secondary button" onclick="window.close()">Close Window</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Extract URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+        const errorDescription = urlParams.get('error_description');
+        const state = urlParams.get('state');
+        
+        // Get DOM elements
+        const loadingState = document.getElementById('loadingState');
+        const successState = document.getElementById('successState');
+        const errorState = document.getElementById('errorState');
+        const errorMessage = document.getElementById('errorMessage');
+        const authCodeDiv = document.getElementById('authCode');
+        const copyButton = document.getElementById('copyButton');
+        
+        // Helper functions
+        function showLoading() {
+            loadingState.classList.remove('hidden');
+            successState.classList.add('hidden');
+            errorState.classList.add('hidden');
+        }
+        
+        function showSuccess() {
+            loadingState.classList.add('hidden');
+            successState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+        }
+        
+        function showError() {
+            loadingState.classList.add('hidden');
+            successState.classList.add('hidden');
+            errorState.classList.remove('hidden');
+        }
+        
+        function selectCode() {
+            const codeElement = document.getElementById('authCode');
+            if (codeElement) {
+                const range = document.createRange();
+                range.selectNodeContents(codeElement);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+        
+        function startAutoReturn() {
+            let countdown = 5;
+            const attemptReturn = () => {
+                try {
+                    // Try to communicate with parent window (for popups)
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage({
+                            type: 'slack-oauth-success',
+                            code: code,
+                            state: state
+                        }, '*');
+                        
+                        setTimeout(() => {
+                            window.close();
+                        }, 1000);
+                        return;
+                    }
+                    
+                    // Try to communicate with parent frame (for iframes)
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({
+                            type: 'slack-oauth-success',
+                            code: code,
+                            state: state
+                        }, '*');
+                        return;
+                    }
+                        // All attempts failed, show manual instructions
+                        const statusEl = document.getElementById('autoReturnStatus');
+                        if (statusEl) {
+                            statusEl.innerHTML = `
+                                <div class="instructions">
+                                    <strong>⚠️ Auto-return failed</strong><br>
+                                    Please manually copy the code above and paste it into your app.
+                                </div>
+                            `;
+                        }
+                    
+                    
+                } catch (error) {
+                    console.log('Auto-return attempt failed:', error);
+                    // Continue with countdown or show manual instructions
+                    if (countdown > 0) {
+                        countdown--;
+                        setTimeout(attemptReturn, 2000);
+                    } else {
+                        const statusEl = document.getElementById('autoReturnStatus');
+                        if (statusEl) {
+                            statusEl.innerHTML = `
+                                <div class="instructions">
+                                    <strong>⚠️ Auto-return failed</strong><br>
+                                    Please manually copy the code above and paste it into your app.
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            };
+            
+            // Start the auto-return attempts
+            setTimeout(attemptReturn, 1000);
+        }
+        
+        function copyCode() {
+            const code = document.getElementById('authCode').textContent;
+            
+            if (!code || code.trim() === '') {
+                alert('No code to copy!');
+                return;
+            }
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = copyButton.textContent;
+                copyButton.textContent = '✅ Copied!';
+                
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code:', err);
+                // Fallback: select the text for manual copying
+                selectCode();
+                alert('Code selected. Press Ctrl+C to copy.');
+            });
+        }
+        
+        // Process the OAuth response
+        function processOAuthResponse() {
+            if (error) {
+                console.error('OAuth error:', error, errorDescription);
+                errorMessage.textContent = `${error}: ${errorDescription || 'Unknown error'}`;
+                showError();
+                return;
+            }
+            
+            if (!code) {
+                console.error('No authorization code received');
+                errorMessage.textContent = 'No authorization code received from Slack';
+                showError();
+                return;
+            }
+            
+            console.log('OAuth success! Code received:', code.substring(0, 10) + '...');
+            
+            // Display the code
+            authCodeDiv.textContent = code;
+            
+            // Show success state
+            showSuccess();
+            
+            // Start auto-return process
+            startAutoReturn();
+        }
+        
+        // Initialize
+        console.log('Slack OAuth callback page loaded');
+        console.log('Code present:', !!code);
+        console.log('Error present:', !!error);
+        console.log('State:', state);
+        
+        // Process the response after a brief delay
+        setTimeout(processOAuthResponse, 500);
+    </script>
+</body>
+</html>
