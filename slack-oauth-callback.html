@@ -143,9 +143,8 @@
                 <div class="auth-code" id="authCode" onclick="selectCode()"></div>
                 <div class="instructions">
                     <strong>What happens next:</strong><br>
-                    • We're attempting to automatically return to your app<br>
-                    • If that doesn't work, copy the code above and paste it into the app<br>
-                    • You can close this window after copying the code
+                    Copy the code above and paste it into the app<br>
+                    You can close this window after copying the code
                 </div>
                 <button class="button" id="copyButton" onclick="copyCode()">📋 Copy Code</button>
                 <div id="autoReturnStatus"></div>
@@ -211,66 +210,18 @@
         function startAutoReturn() {
             let countdown = 5;
             const attemptReturn = () => {
-                try {
-                    // Try to communicate with parent window (for popups)
-                    if (window.opener && !window.opener.closed) {
-                        window.opener.postMessage({
-                            type: 'slack-oauth-success',
-                            code: code,
-                            state: state
-                        }, '*');
-                        
-                        setTimeout(() => {
-                            window.close();
-                        }, 1000);
-                        return;
-                    }
-                    
-                    // Try to communicate with parent frame (for iframes)
-                    if (window.parent && window.parent !== window) {
-                        window.parent.postMessage({
-                            type: 'slack-oauth-success',
-                            code: code,
-                            state: state
-                        }, '*');
-                        return;
-                    }
-                    
-                    // For Electron deep links, try to trigger the CORRECT protocol
-                    if (countdown > 0) {
-                        // FIXED: Use the correct protocol that matches main.js
-                        const returnUrl = `forecastreport://slack/oauth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state || '')}`;
-                        
-                        console.log('Attempting deep link:', returnUrl);
-                        
-                        // Try to trigger the deep link
-                        const link = document.createElement('a');
-                        link.href = returnUrl;
-                        link.style.display = 'none';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        // Update status
-                        const statusEl = document.getElementById('autoReturnStatus');
-                        if (statusEl) {
-                            statusEl.innerHTML = `<p>Auto-return attempt ${6-countdown}/5... <span class="countdown">Retrying in 2 seconds</span></p>`;
-                        }
-                        
-                        countdown--;
-                        setTimeout(attemptReturn, 2000);
-                    } else {
+                try {                 
                         // All attempts failed, show manual instructions
                         const statusEl = document.getElementById('autoReturnStatus');
                         if (statusEl) {
                             statusEl.innerHTML = `
                                 <div class="instructions">
-                                    <strong>⚠️ Auto-return failed</strong><br>
+                                    <strong>⚠️ Auto-return is not available</strong><br>
                                     Please manually copy the code above and paste it into your app.
                                 </div>
                             `;
                         }
-                    }
+                    
                     
                 } catch (error) {
                     console.log('Auto-return attempt failed:', error);
@@ -283,7 +234,7 @@
                         if (statusEl) {
                             statusEl.innerHTML = `
                                 <div class="instructions">
-                                    <strong>⚠️ Auto-return failed</strong><br>
+                                    <strong>⚠️ Auto-return is not available</strong><br>
                                     Please manually copy the code above and paste it into your app.
                                 </div>
                             `;
